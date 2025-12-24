@@ -1,0 +1,2675 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Braids by Zonke - Admin Dashboard</title>
+
+    <!-- SweetAlert2 for better alerts -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: {
+                50: '#fef6ee',
+                100: '#fdebd7',
+                200: '#f9d4af',
+                300: '#f4b57d',
+                400: '#ee904b',
+                500: '#ea7c2a',
+                600: '#db641f',
+                700: '#b64d1c',
+                800: '#913f1d',
+                900: '#75361b',
+              },
+              secondary: {
+                50: '#f0f9ff',
+                100: '#e0f2fe',
+                500: '#0ea5e9',
+                600: '#0284c7',
+              },
+              accent: {
+                500: '#8b5cf6',
+                600: '#7c3aed',
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <!-- Font Awesome -->
+    <script src="https://kit.fontawesome.com/a2d9d6a62b.js" crossorigin="anonymous"></script>
+    <!-- Chart.js for analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js"></script>
+
+    <style>
+      :root {
+        --primary: #ea7c2a;
+        --primary-light: #fef6ee;
+        --primary-dark: #b64d1c;
+        --accent: #0ea5e9;
+        --danger: #dc2626;
+        --success: #10b981;
+        --warning: #f59e0b;
+      }
+
+      body {
+        background: linear-gradient(135deg, #fef6ee 0%, #f0f9ff 100%);
+        min-height: 100vh;
+      }
+
+      .sidebar-item.active {
+        background: linear-gradient(90deg, rgba(234, 124, 42, 0.1) 0%, rgba(234, 124, 42, 0.05) 100%);
+        border-left: 4px solid var(--primary);
+        color: var(--primary);
+        font-weight: 600;
+      }
+
+      .stats-card {
+        background: linear-gradient(135deg, #ffffff 0%, #fef9f3 100%);
+        border: 1px solid rgba(234, 124, 42, 0.1);
+        transition: all 0.3s ease;
+      }
+
+      .stats-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px rgba(234, 124, 42, 0.15);
+        border-color: rgba(234, 124, 42, 0.3);
+      }
+
+      .fade-in {
+        animation: fadeIn 0.5s ease-in-out;
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .loading {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid rgba(234, 124, 42, 0.3);
+        border-radius: 50%;
+        border-top-color: var(--primary);
+        animation: spin 1s ease-in-out infinite;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      /* Enhanced Mobile Sidebar */
+      @media (max-width: 768px) {
+        .sidebar {
+          transform: translateX(-100%);
+          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          position: fixed;
+          z-index: 50;
+          height: 100vh;
+          overflow-y: auto;
+          width: 280px;
+          background: linear-gradient(180deg, #ffffff 0%, #fef9f3 100%);
+          box-shadow: 4px 0 15px rgba(234, 124, 42, 0.1);
+        }
+
+        .sidebar.open {
+          transform: translateX(0);
+        }
+
+        .overlay {
+          display: none;
+          position: fixed;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background-color: rgba(0, 0, 0, 0.5);
+          z-index: 40;
+          backdrop-filter: blur(4px);
+        }
+
+        .overlay.open {
+          display: block;
+          animation: fadeInOverlay 0.3s ease-in-out;
+        }
+
+        @keyframes fadeInOverlay {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+      }
+
+      /* Custom scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        border-radius: 10px;
+      }
+
+      /* Table styles */
+      .table-row-hover:hover {
+        background: linear-gradient(90deg, rgba(234, 124, 42, 0.05) 0%, rgba(234, 124, 42, 0.02) 100%);
+        transition: all 0.2s ease;
+      }
+
+      /* Modal animations */
+      .modal-enter {
+        animation: modalEnter 0.3s ease-out;
+      }
+
+      @keyframes modalEnter {
+        from {
+          opacity: 0;
+          transform: scale(0.9) translateY(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1) translateY(0);
+        }
+      }
+
+      .input-modern {
+        @apply border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all bg-white;
+      }
+
+      .badge {
+        @apply px-2 py-1 text-xs font-medium rounded-full;
+      }
+
+      .badge-upcoming { 
+        background: linear-gradient(135deg, #fef3c7, #fde68a);
+        color: #92400e;
+      }
+      .badge-completed { 
+        background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+        color: #065f46;
+      }
+      .badge-cancelled { 
+        background: linear-gradient(135deg, #fee2e2, #fca5a5);
+        color: #991b1b;
+      }
+
+      /* Glowing effect for live status */
+      .live-glow {
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+
+      /* Gradient buttons */
+      .btn-gradient-primary {
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        color: white;
+        transition: all 0.3s ease;
+      }
+
+      .btn-gradient-primary:hover {
+        background: linear-gradient(135deg, var(--primary-dark), #913f1d);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(234, 124, 42, 0.3);
+      }
+
+      /* Section headers */
+      .section-header {
+        background: linear-gradient(90deg, rgba(234, 124, 42, 0.1) 0%, rgba(234, 124, 42, 0.05) 100%);
+        border-left: 4px solid var(--primary);
+      }
+
+      /* Card backgrounds with subtle patterns */
+      .card-pattern {
+        background-image: 
+          radial-gradient(circle at 10% 20%, rgba(234, 124, 42, 0.05) 0%, transparent 20%),
+          radial-gradient(circle at 90% 80%, rgba(14, 165, 233, 0.05) 0%, transparent 20%);
+      }
+    </style>
+  </head>
+  <body class="flex font-sans min-h-screen">
+    <!-- Overlay for mobile -->
+    <div id="overlay" class="overlay" onclick="closeMobileSidebar()"></div>
+
+    <!-- Enhanced Sidebar -->
+    <aside id="sidebar" class="sidebar w-64 bg-white shadow-2xl border-r border-primary-200">
+      <div class="p-6 border-b border-primary-200 relative" style="background: linear-gradient(90deg, rgba(234, 124, 42, 0.1) 0%, rgba(234, 124, 42, 0.05) 100%);">
+        <div class="flex items-center space-x-3">
+          <div class="w-12 h-12 bg-gradient-to-r from-primary-500 to-primary-600 rounded-full flex items-center justify-center shadow-lg">
+            <span class="text-white font-bold text-xl">B</span>
+          </div>
+          <div>
+            <h1 class="text-xl font-extrabold text-primary-700">Braids by Zonke</h1>
+            <p class="text-primary-600 text-xs">Admin Portal</p>
+          </div>
+        </div>
+        <button id="close-sidebar" class="md:hidden absolute top-4 right-4 text-primary-600 hover:text-primary-800 transition-colors">
+          <i class="fas fa-times text-xl"></i>
+        </button>
+      </div>
+
+      <nav class="p-4 space-y-1 flex-1">
+        <a href="#dashboard" class="sidebar-item flex items-center p-3 rounded-lg hover:bg-primary-50 text-primary-700 font-medium transition-all duration-200 active group">
+          <i class="fas fa-chart-bar mr-3 text-primary-500 w-5 text-center"></i>
+          Dashboard
+        </a>
+        <a href="#bookings" class="sidebar-item flex items-center p-3 rounded-lg hover:bg-primary-50 text-primary-700 font-medium transition-all duration-200 group">
+          <i class="fas fa-calendar-check mr-3 text-primary-500 w-5 text-center"></i>
+          All Bookings
+          <span id="pending-count" class="ml-auto px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full hidden">0</span>
+        </a>
+        <a href="#customers" class="sidebar-item flex items-center p-3 rounded-lg hover:bg-primary-50 text-primary-700 font-medium transition-all duration-200 group">
+          <i class="fas fa-users mr-3 text-primary-500 w-5 text-center"></i>
+          Customers
+          <span id="customer-count" class="ml-auto px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full hidden">0</span>
+        </a>
+        <a href="#services" class="sidebar-item flex items-center p-3 rounded-lg hover:bg-primary-50 text-primary-700 font-medium transition-all duration-200 group">
+          <i class="fas fa-scissors mr-3 text-primary-500 w-5 text-center"></i>
+          Services
+        </a>
+        <a href="#messages" class="sidebar-item flex items-center p-3 rounded-lg hover:bg-primary-50 text-primary-700 font-medium transition-all duration-200 group">
+          <i class="fas fa-comments mr-3 text-primary-500 w-5 text-center"></i>
+          Messages
+          <span id="message-count" class="ml-auto px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full hidden">0</span>
+        </a>
+        <a href="#availability" class="sidebar-item flex items-center p-3 rounded-lg hover:bg-primary-50 text-primary-700 font-medium transition-all duration-200 group">
+          <i class="fas fa-calendar-times mr-3 text-primary-500 w-5 text-center"></i>
+          Availability
+        </a>
+        <a href="#reports" class="sidebar-item flex items-center p-3 rounded-lg hover:bg-primary-50 text-primary-700 font-medium transition-all duration-200 group">
+          <i class="fas fa-chart-pie mr-3 text-primary-500 w-5 text-center"></i>
+          Reports
+        </a>
+      </nav>
+
+      <div class="p-4 border-t border-primary-200 mt-auto" style="background: linear-gradient(90deg, rgba(234, 124, 42, 0.05) 0%, rgba(234, 124, 42, 0.02) 100%);">
+        <div class="flex items-center mb-4 p-3 rounded-lg bg-gradient-to-r from-primary-50 to-amber-50 border border-primary-200">
+          <div class="w-10 h-10 bg-gradient-to-r from-primary-400 to-primary-500 rounded-full flex items-center justify-center shadow-md">
+            <i class="fas fa-user-shield text-white text-sm"></i>
+          </div>
+          <div class="ml-3">
+            <p id="admin-name" class="font-semibold text-primary-800 truncate max-w-[140px]">Zonke Miyashange</p>
+            <p class="text-primary-600 text-xs">Owner & Stylist</p>
+          </div>
+        </div>
+        <button onclick="logout()" class="w-full btn-gradient-primary px-4 py-2.5 rounded-lg font-semibold shadow-lg transition-all duration-200 flex items-center justify-center">
+          <i class="fas fa-sign-out-alt mr-2"></i> Logout
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="main-content flex-1 flex flex-col min-h-screen overflow-hidden">
+      <!-- Enhanced Top Navbar -->
+      <header class="flex items-center justify-between bg-white shadow-sm px-4 md:px-6 py-4 sticky top-0 z-30 border-b border-primary-200" style="background: linear-gradient(90deg, #ffffff 0%, #fef9f3 100%);">
+        <div class="flex items-center">
+          <button id="menuBtn" class="md:hidden text-primary-600 text-xl mr-4 hover:text-primary-800 transition-colors">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h2 class="text-lg font-bold text-primary-800" id="page-title">Admin Dashboard</h2>
+          <div id="live-status" class="ml-4 flex items-center">
+            <div class="w-2 h-2 bg-green-500 rounded-full mr-2 live-glow"></div>
+            <span class="text-xs text-gray-600">Live</span>
+          </div>
+        </div>
+        <div class="flex items-center space-x-4">
+          <div class="text-right hidden md:block">
+            <p id="admin-email" class="text-sm font-medium text-primary-700"></p>
+            <p class="text-xs text-primary-500">Admin</p>
+          </div>
+          <div class="w-8 h-8 bg-gradient-to-r from-primary-500 to-primary-600 rounded-full flex items-center justify-center shadow-md">
+            <span class="text-white font-medium text-sm" id="user-initial">A</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Content Area -->
+      <main class="p-4 md:p-6 space-y-8 md:space-y-10 overflow-y-auto flex-1">
+        <!-- Dashboard Section -->
+        <section id="dashboard" class="fade-in">
+          <div class="mb-6 md:mb-8">
+            <div class="flex flex-col md:flex-row md:items-center justify-between">
+              <div>
+                <h2 class="text-2xl font-bold text-primary-800 mb-2">Welcome, <span id="admin-display-name">Zonke</span>! 👋</h2>
+                <p class="text-primary-600">Here's what's happening with your salon today</p>
+              </div>
+              <div class="mt-4 md:mt-0 flex items-center space-x-3">
+                <span class="text-sm text-primary-600 bg-primary-50 px-3 py-1 rounded-full" id="current-date"></span>
+                <button onclick="refreshDashboard()" class="p-2 hover:bg-primary-100 rounded-lg transition text-primary-600 hover:text-primary-800">
+                  <i class="fas fa-sync-alt"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stats Cards -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
+            <div class="stats-card rounded-2xl p-4 md:p-6 border-t-4 border-secondary-500 card-pattern">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-primary-600 font-medium">Today's Appointments</h3>
+                <div class="bg-secondary-100 p-2 md:p-3 rounded-full">
+                  <i class="fas fa-calendar-day text-secondary-500 text-lg md:text-xl"></i>
+                </div>
+              </div>
+              <p id="today-bookings" class="text-2xl md:text-3xl font-extrabold text-primary-800 mt-2">0</p>
+              <p class="text-sm text-primary-500 mt-1">
+                <span id="today-revenue" class="text-secondary-600 font-semibold">R0</span> revenue
+              </p>
+            </div>
+
+            <div class="stats-card rounded-2xl p-4 md:p-6 border-t-4 border-primary-500 card-pattern">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-primary-600 font-medium">This Week</h3>
+                <div class="bg-primary-100 p-2 md:p-3 rounded-full">
+                  <i class="fas fa-calendar-week text-primary-500 text-lg md:text-xl"></i>
+                </div>
+              </div>
+              <p id="week-bookings" class="text-2xl md:text-3xl font-extrabold text-primary-800 mt-2">0</p>
+              <p class="text-sm text-primary-500 mt-1">
+                <span id="week-revenue" class="text-primary-600 font-semibold">R0</span> expected
+              </p>
+            </div>
+
+            <div class="stats-card rounded-2xl p-4 md:p-6 border-t-4 border-green-500 card-pattern">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-primary-600 font-medium">Total Customers</h3>
+                <div class="bg-green-100 p-2 md:p-3 rounded-full">
+                  <i class="fas fa-users text-green-500 text-lg md:text-xl"></i>
+                </div>
+              </div>
+              <p id="total-customers" class="text-2xl md:text-3xl font-extrabold text-primary-800 mt-2">0</p>
+              <p class="text-sm text-primary-500 mt-1">
+                <span id="active-customers" class="text-green-600 font-semibold">0</span> active this month
+              </p>
+            </div>
+
+            <div class="stats-card rounded-2xl p-4 md:p-6 border-t-4 border-accent-500 card-pattern">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-primary-600 font-medium">Messages</h3>
+                <div class="bg-purple-100 p-2 md:p-3 rounded-full">
+                  <i class="fas fa-comments text-accent-500 text-lg md:text-xl"></i>
+                </div>
+              </div>
+              <p id="unread-messages" class="text-2xl md:text-3xl font-extrabold text-primary-800 mt-2">0</p>
+              <p class="text-sm text-primary-500 mt-1">
+                <span id="total-messages" class="text-accent-600 font-semibold">0</span> total conversations
+              </p>
+            </div>
+          </div>
+
+          <!-- Today's Schedule -->
+          <div class="mb-8">
+            <h3 class="text-xl font-bold text-primary-800 mb-4 flex items-center">
+              <i class="fas fa-calendar-day mr-2"></i>Today's Schedule
+            </h3>
+            <div id="today-schedule" class="stats-card rounded-2xl overflow-hidden">
+              <div class="p-6 border-b border-primary-200 flex justify-between items-center section-header">
+                <h4 class="font-bold text-primary-800">Appointments for <span id="schedule-date"></span></h4>
+                <div class="flex space-x-2">
+                  <button onclick="previousDay()" class="p-2 hover:bg-primary-100 rounded-lg text-primary-600 hover:text-primary-800">
+                    <i class="fas fa-chevron-left"></i>
+                  </button>
+                  <button onclick="nextDay()" class="p-2 hover:bg-primary-100 rounded-lg text-primary-600 hover:text-primary-800">
+                    <i class="fas fa-chevron-right"></i>
+                  </button>
+                </div>
+              </div>
+              <div id="schedule-content" class="divide-y divide-primary-100">
+                <!-- Appointments will be loaded here -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Bookings -->
+          <div>
+            <h3 class="text-xl font-bold text-primary-800 mb-4 flex items-center">
+              <i class="fas fa-history mr-2"></i>Recent Bookings
+            </h3>
+            <div class="stats-card rounded-2xl overflow-hidden">
+              <div class="p-6 border-b border-primary-200 flex justify-between items-center section-header">
+                <h4 class="font-bold text-primary-800">Latest Appointments</h4>
+                <button onclick="navigateToSection('bookings')" class="text-sm btn-gradient-primary px-4 py-2 rounded-lg font-medium hover:shadow-md transition">
+                  View All →
+                </button>
+              </div>
+              <div id="recent-bookings" class="divide-y divide-primary-100">
+                <!-- Recent bookings will be loaded here -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Bookings Section -->
+        <section id="bookings" class="hidden fade-in">
+          <div class="mb-8">
+            <h2 class="text-2xl font-bold text-primary-800 mb-2">All Bookings</h2>
+            <p class="text-primary-600">Manage all customer appointments</p>
+          </div>
+
+          <!-- Filters -->
+          <div class="stats-card rounded-2xl p-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
+                <label class="block text-sm font-semibold text-primary-600 mb-2">Status</label>
+                <select id="status-filter" class="input-modern w-full">
+                  <option value="all">All Statuses</option>
+                  <option value="upcoming">Upcoming</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-primary-600 mb-2">Date</label>
+                <input type="date" id="date-filter" class="input-modern w-full">
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-primary-600 mb-2">Customer</label>
+                <select id="customer-filter" class="input-modern w-full">
+                  <option value="all">All Customers</option>
+                </select>
+              </div>
+              <div class="flex items-end">
+                <button onclick="loadBookings()" class="w-full btn-gradient-primary px-4 py-3 rounded-lg font-semibold transition">
+                  Apply Filters
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bookings Table -->
+          <div class="stats-card rounded-2xl overflow-hidden">
+            <div class="p-6 border-b flex justify-between items-center section-header">
+              <h3 class="font-bold text-lg text-primary-800">Bookings List</h3>
+              <div class="flex items-center space-x-3">
+                <span class="text-sm text-primary-600 bg-primary-50 px-3 py-1 rounded-full" id="bookings-count">0 bookings</span>
+                <button onclick="exportBookings()" class="text-sm btn-gradient-primary px-4 py-2 rounded-lg font-medium hover:shadow-md transition">
+                  <i class="fas fa-download mr-1"></i>Export
+                </button>
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full">
+                <thead class="bg-primary-50">
+                  <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-primary-500 uppercase tracking-wider">Customer</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-primary-500 uppercase tracking-wider">Service</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-primary-500 uppercase tracking-wider">Date & Time</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-primary-500 uppercase tracking-wider">Price</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-primary-500 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-primary-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="bookings-table" class="divide-y divide-primary-200">
+                  <!-- Bookings will be loaded here -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- Customers Section -->
+        <section id="customers" class="hidden fade-in">
+          <div class="mb-8">
+            <h2 class="text-2xl font-bold text-primary-800 mb-2">Customer Management</h2>
+            <p class="text-primary-600">View and manage your customer database</p>
+          </div>
+
+          <div class="stats-card rounded-2xl overflow-hidden">
+            <div class="p-6 border-b flex justify-between items-center section-header">
+              <h3 class="font-bold text-lg text-primary-800">Customer List</h3>
+              <div class="text-sm text-primary-600 bg-primary-50 px-3 py-1 rounded-full" id="customers-count">0 customers</div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full">
+                <thead class="bg-primary-50">
+                  <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-primary-500 uppercase tracking-wider">Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-primary-500 uppercase tracking-wider">Email</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-primary-500 uppercase tracking-wider">Total Bookings</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-primary-500 uppercase tracking-wider">Total Spent</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-primary-500 uppercase tracking-wider">Last Visit</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-primary-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="customers-table" class="divide-y divide-primary-200">
+                  <!-- Customers will be loaded here -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- Services Section -->
+        <section id="services" class="hidden fade-in">
+          <div class="mb-8">
+            <h2 class="text-2xl font-bold text-primary-800 mb-2">Service Management</h2>
+            <p class="text-primary-600">Update your service offerings, pricing, and durations</p>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Add/Edit Service Form -->
+            <div class="lg:col-span-1">
+              <div class="stats-card rounded-2xl p-6">
+                <h3 class="text-lg font-bold text-primary-800 mb-4" id="form-title">Add New Service</h3>
+                <form id="service-form" class="space-y-4">
+                  <input type="hidden" id="service-id">
+                  <div>
+                    <label class="block text-sm font-semibold text-primary-600 mb-2">Service Name</label>
+                    <input type="text" id="service-name" class="input-modern w-full" required>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-semibold text-primary-600 mb-2">Description</label>
+                    <textarea id="service-description" class="input-modern w-full" rows="3"></textarea>
+                  </div>
+                  <div class="grid grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-sm font-semibold text-primary-600 mb-2">Price (R)</label>
+                      <input type="number" id="service-price" class="input-modern w-full" required min="0">
+                    </div>
+                    <div>
+                      <label class="block text-sm font-semibold text-primary-600 mb-2">Duration (hours)</label>
+                      <input type="number" id="service-duration" class="input-modern w-full" required min="1" max="8" step="0.5">
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-semibold text-primary-600 mb-2">Category</label>
+                    <select id="service-category" class="input-modern w-full">
+                      <option value="braids">Braids</option>
+                      <option value="maintenance">Maintenance</option>
+                      <option value="consultation">Consultation</option>
+                    </select>
+                  </div>
+                  <div class="flex space-x-2">
+                    <button type="submit" id="save-service" class="flex-1 btn-gradient-primary px-4 py-3 rounded-lg font-semibold transition">
+                      <i class="fas fa-save mr-2"></i> Save Service
+                    </button>
+                    <button type="button" onclick="resetServiceForm()" class="px-4 py-3 border border-primary-200 rounded-lg font-semibold hover:bg-primary-50 transition text-primary-600">
+                      <i class="fas fa-times"></i>
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            <!-- Services List -->
+            <div class="lg:col-span-2">
+              <div class="stats-card rounded-2xl overflow-hidden">
+                <div class="p-6 border-b section-header">
+                  <h3 class="font-bold text-lg text-primary-800">Service Menu</h3>
+                </div>
+                <div id="services-list" class="divide-y divide-primary-200">
+                  <!-- Services will be loaded here -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Messages Section -->
+        <section id="messages" class="hidden fade-in">
+          <div class="mb-8">
+            <h2 class="text-2xl font-bold text-primary-800 mb-2">Customer Messages</h2>
+            <p class="text-primary-600">Chat with your customers</p>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Conversations List -->
+            <div class="lg:col-span-1">
+              <div class="stats-card rounded-2xl overflow-hidden">
+                <div class="p-6 border-b section-header">
+                  <h3 class="font-bold text-lg text-primary-800">Conversations</h3>
+                </div>
+                <div id="conversations-list" class="divide-y divide-primary-200 max-h-[600px] overflow-y-auto">
+                  <!-- Conversations will be loaded here -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Chat Area -->
+            <div class="lg:col-span-2">
+              <div class="stats-card rounded-2xl overflow-hidden flex flex-col h-[600px]">
+                <div class="p-6 border-b section-header">
+                  <h3 class="font-bold text-lg text-primary-800" id="chat-customer">Select a conversation</h3>
+                  <p class="text-sm text-primary-500" id="chat-email"></p>
+                </div>
+                <div id="chat-messages" class="flex-1 p-6 overflow-y-auto space-y-4 bg-gray-50">
+                  <!-- Messages will be loaded here -->
+                </div>
+                <div class="p-4 border-t bg-white">
+                  <div class="flex space-x-3" id="message-input-container">
+                    <input type="text" id="message-input" placeholder="Type your message..." class="input-modern flex-1" disabled>
+                    <button id="send-message" class="btn-gradient-primary px-6 py-3 rounded-lg font-semibold transition" disabled>
+                      <i class="fas fa-paper-plane"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Availability Section -->
+        <section id="availability" class="hidden fade-in">
+          <div class="mb-8">
+            <h2 class="text-2xl font-bold text-primary-800 mb-2">Manage Availability</h2>
+            <p class="text-primary-600">Block dates when you're not available for bookings</p>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Block Dates Form -->
+            <div class="lg:col-span-1">
+              <div class="stats-card rounded-2xl p-6">
+                <h3 class="text-lg font-bold text-primary-800 mb-4">Block Unavailable Dates</h3>
+                <form id="availability-form" class="space-y-4">
+                  <div>
+                    <label class="block text-sm font-semibold text-primary-600 mb-2">Date to Block</label>
+                    <input type="date" id="block-date" class="input-modern w-full" required>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-semibold text-primary-600 mb-2">Reason (Optional)</label>
+                    <input type="text" id="block-reason" class="input-modern w-full" placeholder="e.g., Vacation, Personal Day">
+                  </div>
+                  <button type="submit" class="w-full bg-gradient-to-r from-red-500 to-red-600 text-white px-4 py-3 rounded-lg font-semibold hover:shadow-md transition">
+                    <i class="fas fa-ban mr-2"></i> Block Date
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            <!-- Calendar View -->
+            <div class="lg:col-span-2">
+              <div class="stats-card rounded-2xl p-6">
+                <div class="flex justify-between items-center mb-6">
+                  <h3 class="text-lg font-bold text-primary-800" id="calendar-title">Availability Calendar</h3>
+                  <div class="flex space-x-2">
+                    <button onclick="previousMonth()" class="p-2 rounded-lg border border-primary-200 hover:bg-primary-50 text-primary-600 hover:text-primary-800">
+                      <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <button onclick="nextMonth()" class="p-2 rounded-lg border border-primary-200 hover:bg-primary-50 text-primary-600 hover:text-primary-800">
+                      <i class="fas fa-chevron-right"></i>
+                    </button>
+                  </div>
+                </div>
+                <div id="calendar" class="grid grid-cols-7 gap-2">
+                  <!-- Calendar will be generated here -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Blocked Dates List -->
+          <div class="mt-8">
+            <div class="stats-card rounded-2xl overflow-hidden">
+              <div class="p-6 border-b section-header">
+                <h4 class="font-bold text-lg text-primary-800">All Blocked Dates</h4>
+              </div>
+              <div id="blocked-dates-table" class="divide-y divide-primary-200">
+                <!-- Blocked dates will be loaded here -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Reports Section -->
+        <section id="reports" class="hidden fade-in">
+          <div class="mb-8">
+            <h2 class="text-2xl font-bold text-primary-800 mb-2">Business Reports</h2>
+            <p class="text-primary-600">Analytics and insights for your salon business</p>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Revenue Chart -->
+            <div class="stats-card rounded-2xl p-6">
+              <h3 class="text-lg font-bold text-primary-800 mb-4">Revenue Overview</h3>
+              <div id="revenue-chart" class="h-64">
+                <canvas id="revenueChart"></canvas>
+              </div>
+            </div>
+
+            <!-- Popular Services -->
+            <div class="stats-card rounded-2xl p-6">
+              <h3 class="text-lg font-bold text-primary-800 mb-4">Popular Services</h3>
+              <div id="services-chart" class="h-64">
+                <canvas id="servicesChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="edit-booking-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl max-w-md w-full mx-auto p-6 modal-enter shadow-2xl">
+        <h3 class="text-xl font-bold text-primary-800 mb-4">Edit Booking</h3>
+        <form id="edit-booking-form" class="space-y-4">
+          <input type="hidden" id="edit-booking-id">
+          <div>
+            <label class="block text-sm font-semibold text-primary-600 mb-2">Status</label>
+            <select id="edit-booking-status" class="input-modern w-full">
+              <option value="upcoming">Upcoming</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-primary-600 mb-2">Date</label>
+            <input type="date" id="edit-booking-date" class="input-modern w-full" required>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-primary-600 mb-2">Time</label>
+            <input type="time" id="edit-booking-time" class="input-modern w-full" required>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-primary-600 mb-2">Price (R)</label>
+            <input type="number" id="edit-booking-price" class="input-modern w-full" required min="0">
+          </div>
+          <div class="flex space-x-3 pt-4">
+            <button type="submit" class="flex-1 btn-gradient-primary px-4 py-3 rounded-lg font-semibold transition">
+              Save Changes
+            </button>
+            <button type="button" onclick="closeEditBookingModal()" class="px-6 py-3 border border-primary-200 rounded-lg font-semibold hover:bg-primary-50 transition text-primary-600">
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script type="module">
+      // Import Firebase modules
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+      import {
+        getAuth,
+        onAuthStateChanged,
+        signOut,
+      } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+      import {
+        getFirestore,
+        collection,
+        addDoc,
+        query,
+        where,
+        getDocs,
+        updateDoc,
+        doc,
+        deleteDoc,
+        orderBy,
+        Timestamp,
+        onSnapshot,
+        setDoc,
+        getDoc,
+        limit,
+        writeBatch,
+        serverTimestamp
+      } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+      // Firebase configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyCkgSvUKoR0FCXARDmgOqoXySMbCh5EMY8",
+        authDomain: "braids-by-zonke.firebaseapp.com",
+        projectId: "braids-by-zonke",
+        storageBucket: "braids-by-zonke.firebasestorage.app",
+        messagingSenderId: "537270598591",
+        appId: "1:537270598591:web:324dd06538c213627abf0a",
+        measurementId: "G-NR21BKSR8N",
+      };
+
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+
+      // Global variables
+      let currentUser = null;
+      let currentMonth = new Date().getMonth();
+      let currentYear = new Date().getFullYear();
+      let currentDate = new Date();
+      let adminEmails = [
+        "zonkemiyashange@gmail.com",
+        "zonke@braidsbyzonke.com",
+        "admin@braidsbyzonke.com"
+      ];
+      let selectedCustomerId = null;
+      let revenueChart = null;
+      let servicesChart = null;
+
+      // ========== INITIALIZATION ==========
+      document.addEventListener('DOMContentLoaded', function() {
+        updateCurrentDate();
+        setupEventListeners();
+      });
+
+      function updateCurrentDate() {
+        const now = new Date();
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('current-date').textContent = now.toLocaleDateString('en-US', options);
+        document.getElementById('schedule-date').textContent = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      }
+
+      function setupEventListeners() {
+        // Mobile sidebar
+        const mobileMenuButton = document.getElementById("menuBtn");
+        const closeSidebar = document.getElementById("close-sidebar");
+        const sidebar = document.getElementById("sidebar");
+        const overlay = document.getElementById("overlay");
+
+        function openMobileSidebar() {
+          sidebar.classList.add("open");
+          overlay.classList.add("open");
+          document.body.style.overflow = "hidden";
+        }
+
+        function closeMobileSidebar() {
+          sidebar.classList.remove("open");
+          overlay.classList.remove("open");
+          document.body.style.overflow = "auto";
+        }
+
+        mobileMenuButton.addEventListener("click", openMobileSidebar);
+        closeSidebar.addEventListener("click", closeMobileSidebar);
+        overlay.addEventListener("click", closeMobileSidebar);
+
+        // Close sidebar when clicking on a link (mobile)
+        document.querySelectorAll(".sidebar-item").forEach((item) => {
+          item.addEventListener("click", () => {
+            if (window.innerWidth < 768) {
+              closeMobileSidebar();
+            }
+          });
+        });
+
+        // Navigation
+        setupNavigation();
+        
+        // Service form
+        const serviceForm = document.getElementById('service-form');
+        serviceForm.addEventListener('submit', handleServiceSubmit);
+        
+        // Availability form
+        const availabilityForm = document.getElementById('availability-form');
+        availabilityForm.addEventListener('submit', handleAvailabilitySubmit);
+        
+        // Edit booking form
+        const editBookingForm = document.getElementById('edit-booking-form');
+        editBookingForm.addEventListener('submit', handleEditBookingSubmit);
+        
+        // Send message
+        const sendMessageBtn = document.getElementById('send-message');
+        sendMessageBtn.addEventListener('click', sendMessage);
+        
+        // Message input on enter
+        const messageInput = document.getElementById('message-input');
+        messageInput.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            sendMessage();
+          }
+        });
+      }
+
+      // ========== AUTHENTICATION ==========
+      async function verifyAdmin(email) {
+        return adminEmails.includes(email);
+      }
+
+      onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          const isAdmin = await verifyAdmin(user.email);
+          if (!isAdmin) {
+            window.location.href = "client.html";
+            return;
+          }
+
+          currentUser = user;
+          document.getElementById('admin-email').textContent = user.email;
+          document.getElementById('admin-display-name').textContent = user.displayName || user.email.split('@')[0];
+          document.getElementById('user-initial').textContent = user.email.charAt(0).toUpperCase();
+          
+          // Update admin name in sidebar
+          const adminNameElement = document.getElementById('admin-name');
+          if (adminNameElement) {
+            adminNameElement.textContent = user.displayName || "Zonke Miyashange";
+          }
+          
+          // Initialize admin in Firestore
+          await initializeAdminUser();
+          
+          // Load data and setup real-time listeners
+          loadDashboardData();
+          setupRealtimeListeners();
+          
+          // Load initial data for current section
+          const currentSection = getCurrentSection();
+          if (currentSection === 'bookings') {
+            loadBookings();
+          } else if (currentSection === 'customers') {
+            loadAllCustomers();
+          } else if (currentSection === 'services') {
+            loadServices();
+          } else if (currentSection === 'messages') {
+            loadConversations();
+          } else if (currentSection === 'availability') {
+            loadAvailability();
+          } else if (currentSection === 'reports') {
+            loadReports();
+          }
+        } else {
+          window.location.href = "index.html";
+        }
+      });
+
+      async function initializeAdminUser() {
+        try {
+          await setDoc(doc(db, "adminUsers", currentUser.uid), {
+            email: currentUser.email,
+            name: currentUser.displayName || "Zonke Miyashange",
+            role: "admin",
+            lastActive: Timestamp.now(),
+            createdAt: Timestamp.now()
+          }, { merge: true });
+        } catch (error) {
+          console.error("Error initializing admin user:", error);
+        }
+      }
+
+      // ========== NAVIGATION ==========
+      function setupNavigation() {
+        document.querySelectorAll(".sidebar-item").forEach((item) => {
+          item.addEventListener("click", function (e) {
+            e.preventDefault();
+            const target = this.getAttribute("href").substring(1);
+            navigateToSection(target);
+          });
+        });
+      }
+
+      function getCurrentSection() {
+        const sections = document.querySelectorAll('section');
+        for (let section of sections) {
+          if (!section.classList.contains('hidden')) {
+            return section.id;
+          }
+        }
+        return 'dashboard';
+      }
+
+      function navigateToSection(section) {
+        // Update active state
+        document.querySelectorAll(".sidebar-item").forEach((i) => {
+          i.classList.remove("active");
+        });
+        const activeItem = document.querySelector(`a[href="#${section}"]`);
+        if (activeItem) {
+          activeItem.classList.add("active");
+        }
+
+        // Hide all sections
+        document.querySelectorAll("section").forEach((section) => {
+          section.classList.add("hidden");
+        });
+
+        // Show target section
+        const targetSection = document.getElementById(section);
+        if (targetSection) {
+          targetSection.classList.remove("hidden");
+          targetSection.classList.add("fade-in");
+        }
+
+        // Update page title
+        updatePageTitle(section);
+
+        // Load section-specific data
+        switch(section) {
+          case 'dashboard':
+            loadDashboardData();
+            break;
+          case 'bookings':
+            loadBookings();
+            break;
+          case 'customers':
+            loadAllCustomers();
+            break;
+          case 'services':
+            loadServices();
+            break;
+          case 'messages':
+            loadConversations();
+            break;
+          case 'availability':
+            loadAvailability();
+            break;
+          case 'reports':
+            loadReports();
+            break;
+        }
+      }
+
+      function updatePageTitle(section) {
+        const titles = {
+          dashboard: "Admin Dashboard",
+          bookings: "All Bookings",
+          customers: "Customer Management",
+          services: "Service Management",
+          messages: "Customer Messages",
+          availability: "Availability Management",
+          reports: "Business Reports"
+        };
+        document.getElementById("page-title").textContent = titles[section] || "Admin Dashboard";
+      }
+
+      // ========== DASHBOARD FUNCTIONS ==========
+      async function loadDashboardData() {
+        try {
+          const today = new Date().toISOString().split("T")[0];
+          
+          // Get today's bookings
+          const todayQuery = query(
+            collection(db, "bookings"),
+            where("date", "==", today),
+            where("status", "==", "upcoming")
+          );
+          
+          // Get this week's bookings (last 7 days)
+          const weekAgo = new Date();
+          weekAgo.setDate(weekAgo.getDate() - 7);
+          const weekAgoStr = weekAgo.toISOString().split("T")[0];
+          
+          const weekQuery = query(
+            collection(db, "bookings"),
+            where("date", ">=", weekAgoStr)
+          );
+          
+          // Get all bookings for recent list
+          const recentQuery = query(
+            collection(db, "bookings"),
+            orderBy("createdAt", "desc"),
+            limit(10)
+          );
+          
+          // Get unread messages
+          const messagesQuery = query(
+            collection(db, "messages"),
+            where("read", "==", false),
+            where("sender", "==", "client")
+          );
+          
+          const [todaySnapshot, weekSnapshot, recentSnapshot, messagesSnapshot] = await Promise.all([
+            getDocs(todayQuery),
+            getDocs(weekQuery),
+            getDocs(recentQuery),
+            getDocs(messagesQuery)
+          ]);
+          
+          // Calculate stats
+          updateDashboardStats(todaySnapshot, weekSnapshot, messagesSnapshot);
+          
+          // Update today's schedule
+          updateTodaySchedule(todaySnapshot);
+          
+          // Update recent bookings
+          updateRecentBookings(recentSnapshot);
+          
+        } catch (error) {
+          console.error("Error loading dashboard data:", error);
+          showError("Failed to load dashboard data");
+        }
+      }
+
+      function updateDashboardStats(todaySnapshot, weekSnapshot, messagesSnapshot) {
+        // Today's stats
+        let todayRevenue = 0;
+        todaySnapshot.forEach(doc => {
+          const booking = doc.data();
+          todayRevenue += booking.price || 0;
+        });
+        
+        document.getElementById('today-bookings').textContent = todaySnapshot.size;
+        document.getElementById('today-revenue').textContent = `R${todayRevenue}`;
+        
+        // Week stats
+        let weekRevenue = 0;
+        weekSnapshot.forEach(doc => {
+          const booking = doc.data();
+          weekRevenue += booking.price || 0;
+        });
+        
+        document.getElementById('week-bookings').textContent = weekSnapshot.size;
+        document.getElementById('week-revenue').textContent = `R${weekRevenue}`;
+        
+        // Messages
+        document.getElementById('unread-messages').textContent = messagesSnapshot.size;
+        
+        // Update counts in sidebar
+        const pendingCount = document.getElementById('pending-count');
+        if (todaySnapshot.size > 0) {
+          pendingCount.textContent = todaySnapshot.size;
+          pendingCount.classList.remove('hidden');
+        } else {
+          pendingCount.classList.add('hidden');
+        }
+        
+        const messageCount = document.getElementById('message-count');
+        if (messagesSnapshot.size > 0) {
+          messageCount.textContent = messagesSnapshot.size;
+          messageCount.classList.remove('hidden');
+        } else {
+          messageCount.classList.add('hidden');
+        }
+      }
+
+      function updateTodaySchedule(snapshot) {
+        const scheduleContent = document.getElementById('schedule-content');
+        
+        if (snapshot.empty) {
+          scheduleContent.innerHTML = `
+            <div class="p-8 text-center">
+              <i class="fas fa-calendar-times text-3xl text-primary-300 mb-3"></i>
+              <p class="text-primary-600">No appointments for today</p>
+              <p class="text-sm text-primary-500 mt-1">Enjoy your day!</p>
+            </div>
+          `;
+          return;
+        }
+        
+        let html = '';
+        const bookings = [];
+        
+        snapshot.forEach(doc => {
+          bookings.push({ id: doc.id, ...doc.data() });
+        });
+        
+        // Sort by time
+        bookings.sort((a, b) => {
+          const timeA = a.time.split(':').map(Number);
+          const timeB = b.time.split(':').map(Number);
+          return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
+        });
+        
+        bookings.forEach(booking => {
+          html += `
+            <div class="p-4 hover:bg-primary-50 transition">
+              <div class="flex items-center justify-between">
+                <div class="flex-1">
+                  <div class="flex items-center mb-2">
+                    <span class="font-bold text-primary-800">${booking.time}</span>
+                    <span class="ml-3 px-2 py-1 text-xs rounded-full badge-upcoming">
+                      ${booking.status}
+                    </span>
+                  </div>
+                  <p class="font-medium text-primary-800">${booking.userName || booking.userEmail}</p>
+                  <p class="text-sm text-primary-600">${booking.style} • ${booking.duration || '3'}h • R${booking.price || 0}</p>
+                  ${booking.specialRequests ? `
+                    <p class="text-xs text-primary-500 mt-1">
+                      <i class="fas fa-sticky-note mr-1"></i>${booking.specialRequests.substring(0, 50)}${booking.specialRequests.length > 50 ? '...' : ''}
+                    </p>
+                  ` : ''}
+                </div>
+                <div class="flex space-x-2">
+                  <button onclick="editBooking('${booking.id}')" class="p-2 text-primary-600 hover:bg-primary-100 rounded-lg">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button onclick="completeBooking('${booking.id}')" class="p-2 text-green-600 hover:bg-green-100 rounded-lg">
+                    <i class="fas fa-check"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+        
+        scheduleContent.innerHTML = html;
+      }
+
+      function updateRecentBookings(snapshot) {
+        const recentBookings = document.getElementById('recent-bookings');
+        
+        if (snapshot.empty) {
+          recentBookings.innerHTML = `
+            <div class="p-8 text-center">
+              <p class="text-primary-500">No recent bookings</p>
+            </div>
+          `;
+          return;
+        }
+        
+        let html = '';
+        snapshot.forEach(doc => {
+          const booking = doc.data();
+          const date = new Date(booking.date);
+          const formattedDate = date.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric' 
+          });
+          
+          html += `
+            <div class="p-4 hover:bg-primary-50 transition">
+              <div class="flex items-center justify-between">
+                <div class="flex-1">
+                  <p class="font-medium text-primary-800">${booking.userName || booking.userEmail}</p>
+                  <p class="text-sm text-primary-600">
+                    ${formattedDate} at ${booking.time} • ${booking.style}
+                  </p>
+                </div>
+                <div class="flex items-center space-x-4">
+                  <span class="font-semibold text-primary-800">R${booking.price || 0}</span>
+                  <span class="px-2 py-1 text-xs rounded-full ${
+                    booking.status === 'completed' ? 'badge-completed' :
+                    booking.status === 'cancelled' ? 'badge-cancelled' :
+                    'badge-upcoming'
+                  }">
+                    ${booking.status}
+                  </span>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+        
+        recentBookings.innerHTML = html;
+      }
+
+      // ========== BOOKINGS MANAGEMENT ==========
+      async function loadBookings() {
+        try {
+          showLoading('bookings-table', 'Loading bookings...');
+          
+          const status = document.getElementById('status-filter').value;
+          const date = document.getElementById('date-filter').value;
+          const customer = document.getElementById('customer-filter').value;
+          
+          let q = collection(db, "bookings");
+          const constraints = [];
+          
+          if (status !== 'all') {
+            constraints.push(where("status", "==", status));
+          }
+          
+          if (date) {
+            constraints.push(where("date", "==", date));
+          }
+          
+          if (customer !== 'all') {
+            constraints.push(where("userId", "==", customer));
+          }
+          
+          constraints.push(orderBy("date", "desc"));
+          q = query(q, ...constraints);
+          
+          const snapshot = await getDocs(q);
+          displayBookingsTable(snapshot);
+          
+          // Populate customer filter
+          populateCustomerFilter();
+          
+        } catch (error) {
+          console.error("Error loading bookings:", error);
+          showError("Failed to load bookings");
+        }
+      }
+
+      function displayBookingsTable(snapshot) {
+        const table = document.getElementById('bookings-table');
+        const count = document.getElementById('bookings-count');
+        
+        if (snapshot.empty) {
+          table.innerHTML = `
+            <tr>
+              <td colspan="6" class="px-6 py-8 text-center text-primary-500">
+                <i class="fas fa-calendar-times text-3xl mb-3"></i>
+                <p>No bookings found</p>
+              </td>
+            </tr>
+          `;
+          count.textContent = '0 bookings';
+          return;
+        }
+        
+        let html = '';
+        snapshot.forEach(doc => {
+          const booking = doc.data();
+          const date = new Date(booking.date);
+          const formattedDate = date.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric',
+            year: 'numeric'
+          });
+          
+          html += `
+            <tr class="table-row-hover">
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm font-medium text-primary-800">${booking.userName || booking.userEmail}</div>
+                <div class="text-sm text-primary-600">${booking.userEmail || ''}</div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm text-primary-800">${booking.style}</div>
+                <div class="text-sm text-primary-600">${booking.duration || '3'} hours</div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm text-primary-800">${formattedDate}</div>
+                <div class="text-sm text-primary-600">${booking.time}</div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm font-medium text-primary-800">R${booking.price || 0}</div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span class="px-2 py-1 text-xs rounded-full ${
+                  booking.status === 'completed' ? 'badge-completed' :
+                  booking.status === 'cancelled' ? 'badge-cancelled' :
+                  'badge-upcoming'
+                }">
+                  ${booking.status}
+                </span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <button onclick="editBooking('${doc.id}')" class="text-primary-600 hover:text-primary-900 mr-3">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button onclick="deleteBooking('${doc.id}')" class="text-red-600 hover:text-red-900">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </td>
+            </tr>
+          `;
+        });
+        
+        table.innerHTML = html;
+        count.textContent = `${snapshot.size} bookings`;
+      }
+
+      async function populateCustomerFilter() {
+        try {
+          const q = query(collection(db, "bookings"));
+          const snapshot = await getDocs(q);
+          const customers = new Map();
+          
+          snapshot.forEach(doc => {
+            const booking = doc.data();
+            if (booking.userId) {
+              customers.set(booking.userId, booking.userEmail);
+            }
+          });
+          
+          const select = document.getElementById('customer-filter');
+          let options = '<option value="all">All Customers</option>';
+          
+          customers.forEach((email, userId) => {
+            options += `<option value="${userId}">${email}</option>`;
+          });
+          
+          select.innerHTML = options;
+          
+        } catch (error) {
+          console.error("Error populating customer filter:", error);
+        }
+      }
+
+      window.editBooking = async (id) => {
+        try {
+          const docRef = doc(db, "bookings", id);
+          const docSnap = await getDoc(docRef);
+          
+          if (docSnap.exists()) {
+            const booking = docSnap.data();
+            
+            document.getElementById('edit-booking-id').value = id;
+            document.getElementById('edit-booking-status').value = booking.status || 'upcoming';
+            document.getElementById('edit-booking-date').value = booking.date;
+            document.getElementById('edit-booking-time').value = booking.time;
+            document.getElementById('edit-booking-price').value = booking.price || 0;
+            
+            document.getElementById('edit-booking-modal').classList.remove('hidden');
+          }
+        } catch (error) {
+          console.error("Error loading booking:", error);
+          showError("Failed to load booking");
+        }
+      };
+
+      async function handleEditBookingSubmit(e) {
+        e.preventDefault();
+        
+        try {
+          const id = document.getElementById('edit-booking-id').value;
+          const status = document.getElementById('edit-booking-status').value;
+          const date = document.getElementById('edit-booking-date').value;
+          const time = document.getElementById('edit-booking-time').value;
+          const price = document.getElementById('edit-booking-price').value;
+          
+          await updateDoc(doc(db, "bookings", id), {
+            status,
+            date,
+            time,
+            price: parseFloat(price),
+            updatedAt: Timestamp.now()
+          });
+          
+          closeEditBookingModal();
+          showSuccess("Booking updated successfully!");
+          loadBookings();
+          loadDashboardData();
+          
+        } catch (error) {
+          console.error("Error updating booking:", error);
+          showError("Failed to update booking");
+        }
+      }
+
+      window.closeEditBookingModal = () => {
+        document.getElementById('edit-booking-modal').classList.add('hidden');
+      };
+
+      window.completeBooking = async (id) => {
+        try {
+          await updateDoc(doc(db, "bookings", id), {
+            status: 'completed',
+            updatedAt: Timestamp.now()
+          });
+          showSuccess("Booking marked as completed!");
+          loadDashboardData();
+        } catch (error) {
+          console.error("Error completing booking:", error);
+          showError("Failed to complete booking");
+        }
+      };
+
+      window.deleteBooking = async (id) => {
+        showConfirm(
+          "Are you sure you want to delete this booking? This action cannot be undone.",
+          async () => {
+            try {
+              await deleteDoc(doc(db, "bookings", id));
+              showSuccess("Booking deleted successfully!");
+              loadBookings();
+              loadDashboardData();
+            } catch (error) {
+              console.error("Error deleting booking:", error);
+              showError("Failed to delete booking");
+            }
+          }
+        );
+      };
+
+      window.exportBookings = async () => {
+        try {
+          const q = query(collection(db, "bookings"), orderBy("date", "desc"));
+          const snapshot = await getDocs(q);
+          
+          let csv = "Customer Email,Service,Date,Time,Price,Status,Special Requests\n";
+          
+          snapshot.forEach(doc => {
+            const booking = doc.data();
+            const specialRequests = booking.specialRequests ? `"${booking.specialRequests.replace(/"/g, '""')}"` : '';
+            csv += `${booking.userEmail},${booking.style},${booking.date},${booking.time},${booking.price || 0},${booking.status},${specialRequests}\n`;
+          });
+          
+          const blob = new Blob([csv], { type: 'text/csv' });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `bookings-${new Date().toISOString().split('T')[0]}.csv`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+          
+          showSuccess("Bookings exported successfully!");
+        } catch (error) {
+          console.error("Error exporting bookings:", error);
+          showError("Failed to export bookings");
+        }
+      };
+
+      // ========== CUSTOMERS MANAGEMENT ==========
+      async function loadAllCustomers() {
+        try {
+          showLoading('customers-table', 'Loading customers...');
+          
+          const q = query(collection(db, "bookings"));
+          const snapshot = await getDocs(q);
+          
+          const customerMap = new Map();
+          
+          snapshot.forEach(doc => {
+            const booking = doc.data();
+            const customerKey = booking.userId || booking.userEmail;
+            
+            if (!customerMap.has(customerKey)) {
+              customerMap.set(customerKey, {
+                id: booking.userId,
+                email: booking.userEmail,
+                name: booking.userName || booking.userEmail.split('@')[0],
+                totalBookings: 0,
+                totalSpent: 0,
+                lastVisit: booking.date,
+                firstVisit: booking.date
+              });
+            }
+            
+            const customer = customerMap.get(customerKey);
+            customer.totalBookings++;
+            customer.totalSpent += booking.price || 0;
+            
+            if (new Date(booking.date) > new Date(customer.lastVisit)) {
+              customer.lastVisit = booking.date;
+            }
+            
+            if (new Date(booking.date) < new Date(customer.firstVisit)) {
+              customer.firstVisit = booking.date;
+            }
+          });
+          
+          const customers = Array.from(customerMap.values());
+          displayCustomersTable(customers);
+          
+        } catch (error) {
+          console.error("Error loading customers:", error);
+          showError("Failed to load customers");
+        }
+      }
+
+      function displayCustomersTable(customers) {
+        const table = document.getElementById('customers-table');
+        const count = document.getElementById('customers-count');
+        
+        if (customers.length === 0) {
+          table.innerHTML = `
+            <tr>
+              <td colspan="6" class="px-6 py-8 text-center text-primary-500">
+                <i class="fas fa-users text-3xl mb-3"></i>
+                <p>No customers found</p>
+              </td>
+            </tr>
+          `;
+          count.textContent = '0 customers';
+          return;
+        }
+        
+        customers.sort((a, b) => b.totalBookings - a.totalBookings);
+        
+        let html = '';
+        customers.forEach(customer => {
+          const lastVisit = new Date(customer.lastVisit);
+          const formattedDate = lastVisit.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric',
+            year: 'numeric'
+          });
+          
+          html += `
+            <tr class="table-row-hover">
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm font-medium text-primary-800">${customer.name}</div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm text-primary-600">${customer.email}</div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm text-primary-800">${customer.totalBookings}</div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm font-medium text-primary-800">R${customer.totalSpent}</div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm text-primary-600">${formattedDate}</div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <button onclick="viewCustomerMessages('${customer.id || customer.email}')" class="text-primary-600 hover:text-primary-900 mr-3">
+                  <i class="fas fa-comments"></i>
+                </button>
+                <button onclick="viewCustomerBookings('${customer.id || customer.email}')" class="text-green-600 hover:text-green-900">
+                  <i class="fas fa-history"></i>
+                </button>
+              </td>
+            </tr>
+          `;
+        });
+        
+        table.innerHTML = html;
+        count.textContent = `${customers.length} customers`;
+        
+        // Update dashboard stats
+        document.getElementById('total-customers').textContent = customers.length;
+        
+        // Calculate active customers this month
+        const currentMonth = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
+        const activeCustomers = customers.filter(customer => {
+          const lastVisit = new Date(customer.lastVisit);
+          return lastVisit.getMonth() === currentMonth && lastVisit.getFullYear() === currentYear;
+        }).length;
+        
+        document.getElementById('active-customers').textContent = activeCustomers;
+        document.getElementById('customer-count').textContent = customers.length;
+        document.getElementById('customer-count').classList.remove('hidden');
+      }
+
+      window.viewCustomerMessages = (customerId) => {
+        selectedCustomerId = customerId;
+        navigateToSection('messages');
+        // This will trigger loadConversations which will select the customer
+      };
+
+      window.viewCustomerBookings = async (customerId) => {
+        try {
+          let q;
+          if (customerId.includes('@')) {
+            // Customer identified by email
+            q = query(
+              collection(db, "bookings"),
+              where("userEmail", "==", customerId),
+              orderBy("date", "desc")
+            );
+          } else {
+            // Customer identified by userId
+            q = query(
+              collection(db, "bookings"),
+              where("userId", "==", customerId),
+              orderBy("date", "desc")
+            );
+          }
+          
+          const snapshot = await getDocs(q);
+          
+          let message = "Customer's Bookings:\n\n";
+          snapshot.forEach(doc => {
+            const booking = doc.data();
+            message += `• ${booking.date} at ${booking.time}: ${booking.style} - R${booking.price} (${booking.status})\n`;
+          });
+          
+          Swal.fire({
+            title: 'Customer Bookings',
+            text: message,
+            icon: 'info',
+            confirmButtonColor: '#ea7c2a'
+          });
+        } catch (error) {
+          console.error("Error loading customer bookings:", error);
+          showError("Failed to load customer bookings");
+        }
+      };
+
+      // ========== SERVICES MANAGEMENT ==========
+      async function loadServices() {
+        try {
+          showLoading('services-list', 'Loading services...');
+          
+          const q = query(collection(db, "services"), orderBy("createdAt", "desc"));
+          const snapshot = await getDocs(q);
+          displayServicesList(snapshot);
+          
+        } catch (error) {
+          console.error("Error loading services:", error);
+          showError("Failed to load services");
+        }
+      }
+
+      function displayServicesList(snapshot) {
+        const servicesList = document.getElementById('services-list');
+        
+        if (snapshot.empty) {
+          servicesList.innerHTML = `
+            <div class="p-8 text-center">
+              <i class="fas fa-scissors text-3xl text-primary-300 mb-3"></i>
+              <p class="text-primary-600">No services found</p>
+              <p class="text-sm text-primary-500 mt-1">Add your first service to get started</p>
+            </div>
+          `;
+          return;
+        }
+        
+        let html = '';
+        snapshot.forEach(doc => {
+          const service = doc.data();
+          
+          html += `
+            <div class="p-6 flex items-center justify-between hover:bg-primary-50 transition">
+              <div class="flex-1">
+                <h4 class="font-bold text-primary-800 text-lg">${service.name}</h4>
+                ${service.description ? `<p class="text-sm text-primary-600 mt-1">${service.description}</p>` : ''}
+                <div class="flex items-center space-x-4 mt-3">
+                  <span class="text-sm text-primary-500">
+                    <i class="fas fa-clock mr-1"></i>${service.duration} hours
+                  </span>
+                  <span class="text-sm text-primary-500">
+                    <i class="fas fa-tag mr-1"></i>R${service.price}
+                  </span>
+                  <span class="text-xs px-2 py-1 bg-primary-100 text-primary-700 rounded-full">
+                    ${service.category || 'braids'}
+                  </span>
+                </div>
+              </div>
+              <div class="flex items-center space-x-2">
+                <button onclick="editService('${doc.id}')" class="text-primary-600 hover:text-primary-900 p-2">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button onclick="deleteService('${doc.id}')" class="text-red-600 hover:text-red-900 p-2">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </div>
+          `;
+        });
+        
+        servicesList.innerHTML = html;
+      }
+
+      async function handleServiceSubmit(e) {
+        e.preventDefault();
+        
+        try {
+          const id = document.getElementById('service-id').value;
+          const name = document.getElementById('service-name').value;
+          const description = document.getElementById('service-description').value;
+          const price = parseFloat(document.getElementById('service-price').value);
+          const duration = parseFloat(document.getElementById('service-duration').value);
+          const category = document.getElementById('service-category').value;
+          
+          const serviceData = {
+            name,
+            description,
+            price,
+            duration,
+            category,
+            updatedAt: Timestamp.now()
+          };
+          
+          if (id) {
+            // Update existing service
+            await updateDoc(doc(db, "services", id), serviceData);
+            showSuccess("Service updated successfully!");
+          } else {
+            // Create new service
+            serviceData.createdAt = Timestamp.now();
+            await addDoc(collection(db, "services"), serviceData);
+            showSuccess("Service added successfully!");
+          }
+          
+          resetServiceForm();
+          loadServices();
+          
+        } catch (error) {
+          console.error("Error saving service:", error);
+          showError("Failed to save service");
+        }
+      }
+
+      window.editService = async (id) => {
+        try {
+          const docRef = doc(db, "services", id);
+          const docSnap = await getDoc(docRef);
+          
+          if (docSnap.exists()) {
+            const service = docSnap.data();
+            
+            document.getElementById('service-id').value = id;
+            document.getElementById('service-name').value = service.name;
+            document.getElementById('service-description').value = service.description || '';
+            document.getElementById('service-price').value = service.price;
+            document.getElementById('service-duration').value = service.duration;
+            document.getElementById('service-category').value = service.category || 'braids';
+            
+            document.getElementById('form-title').textContent = 'Edit Service';
+          }
+        } catch (error) {
+          console.error("Error loading service:", error);
+          showError("Failed to load service");
+        }
+      };
+
+      window.deleteService = async (id) => {
+        showConfirm(
+          "Are you sure you want to delete this service? This action cannot be undone.",
+          async () => {
+            try {
+              await deleteDoc(doc(db, "services", id));
+              showSuccess("Service deleted successfully!");
+              loadServices();
+            } catch (error) {
+              console.error("Error deleting service:", error);
+              showError("Failed to delete service");
+            }
+          }
+        );
+      };
+
+      window.resetServiceForm = () => {
+        document.getElementById('service-id').value = '';
+        document.getElementById('service-name').value = '';
+        document.getElementById('service-description').value = '';
+        document.getElementById('service-price').value = '';
+        document.getElementById('service-duration').value = '3';
+        document.getElementById('service-category').value = 'braids';
+        document.getElementById('form-title').textContent = 'Add New Service';
+      };
+
+      // ========== MESSAGES MANAGEMENT ==========
+      async function loadConversations() {
+        try {
+          showLoading('conversations-list', 'Loading conversations...');
+          
+          const q = query(
+            collection(db, "messages"),
+            orderBy("createdAt", "desc")
+          );
+          
+          const snapshot = await getDocs(q);
+          const conversations = new Map();
+          
+          snapshot.forEach(doc => {
+            const message = doc.data();
+            const customerKey = message.userId || message.userEmail;
+            
+            if (!conversations.has(customerKey)) {
+              conversations.set(customerKey, {
+                id: message.userId,
+                email: message.userEmail,
+                name: message.userName || message.userEmail.split('@')[0],
+                lastMessage: message.text,
+                lastMessageTime: message.createdAt,
+                unread: message.sender === 'client' && !message.read,
+                messageCount: 1
+              });
+            } else {
+              const conv = conversations.get(customerKey);
+              conv.messageCount++;
+              if (message.sender === 'client' && !message.read) {
+                conv.unread = true;
+              }
+            }
+          });
+          
+          displayConversationsList(Array.from(conversations.values()));
+          
+          // If a customer was selected, load their messages
+          if (selectedCustomerId) {
+            const customer = Array.from(conversations.values()).find(c => 
+              c.id === selectedCustomerId || c.email === selectedCustomerId
+            );
+            if (customer) {
+              selectConversation(customer);
+            }
+          }
+          
+        } catch (error) {
+          console.error("Error loading conversations:", error);
+          showError("Failed to load conversations");
+        }
+      }
+
+      function displayConversationsList(conversations) {
+        const list = document.getElementById('conversations-list');
+        
+        if (conversations.length === 0) {
+          list.innerHTML = `
+            <div class="p-8 text-center">
+              <i class="fas fa-comments text-3xl text-primary-300 mb-3"></i>
+              <p class="text-primary-600">No conversations</p>
+              <p class="text-sm text-primary-500 mt-1">Start chatting with your customers</p>
+            </div>
+          `;
+          return;
+        }
+        
+        conversations.sort((a, b) => b.lastMessageTime - a.lastMessageTime);
+        
+        let html = '';
+        conversations.forEach(conv => {
+          const lastMessageTime = conv.lastMessageTime?.toDate();
+          const timeAgo = lastMessageTime ? getTimeAgo(lastMessageTime) : 'Just now';
+          
+          html += `
+            <div class="p-4 hover:bg-primary-50 cursor-pointer transition ${conv.unread ? 'bg-blue-50' : ''}" 
+                 onclick="selectConversation(${JSON.stringify(conv).replace(/"/g, '&quot;')})">
+              <div class="flex items-center">
+                <div class="w-10 h-10 bg-gradient-to-r from-primary-400 to-primary-500 rounded-full flex items-center justify-center mr-3">
+                  <span class="text-white font-medium">${conv.name.charAt(0).toUpperCase()}</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between mb-1">
+                    <h4 class="font-semibold text-primary-800 truncate">${conv.name}</h4>
+                    <span class="text-xs text-primary-500">${timeAgo}</span>
+                  </div>
+                  <p class="text-sm text-primary-600 truncate">${conv.lastMessage}</p>
+                </div>
+                ${conv.unread ? `
+                  <div class="ml-2">
+                    <span class="w-2 h-2 bg-blue-500 rounded-full"></span>
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+          `;
+        });
+        
+        list.innerHTML = html;
+      }
+
+      window.selectConversation = async (customer) => {
+        selectedCustomerId = customer.id || customer.email;
+        
+        // Update chat header
+        document.getElementById('chat-customer').textContent = customer.name;
+        document.getElementById('chat-email').textContent = customer.email;
+        
+        // Enable message input
+        document.getElementById('message-input').disabled = false;
+        document.getElementById('send-message').disabled = false;
+        
+        // Load messages for this customer
+        await loadCustomerMessages(customer.id || customer.email);
+        
+        // Mark messages as read
+        await markMessagesAsRead(customer.id || customer.email);
+      };
+
+      async function loadCustomerMessages(customerId) {
+        try {
+          let q;
+          if (customerId.includes('@')) {
+            // Customer identified by email
+            q = query(
+              collection(db, "messages"),
+              where("userEmail", "==", customerId),
+              orderBy("createdAt", "asc")
+            );
+          } else {
+            // Customer identified by userId
+            q = query(
+              collection(db, "messages"),
+              where("userId", "==", customerId),
+              orderBy("createdAt", "asc")
+            );
+          }
+          
+          const snapshot = await getDocs(q);
+          displayMessages(snapshot);
+          
+        } catch (error) {
+          console.error("Error loading messages:", error);
+          showError("Failed to load messages");
+        }
+      }
+
+      function displayMessages(snapshot) {
+        const chatMessages = document.getElementById('chat-messages');
+        
+        if (snapshot.empty) {
+          chatMessages.innerHTML = `
+            <div class="text-center text-primary-500 py-8">
+              <p>No messages yet. Start the conversation!</p>
+            </div>
+          `;
+          return;
+        }
+        
+        let html = '';
+        snapshot.forEach(doc => {
+          const message = doc.data();
+          const time = message.createdAt?.toDate().toLocaleTimeString([], { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+          }) || '';
+          
+          html += `
+            <div class="${message.sender === 'client' ? 'text-left' : 'text-right'}">
+              <div class="inline-block max-w-[70%] rounded-2xl px-4 py-2 ${
+                message.sender === 'client' 
+                  ? 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800' 
+                  : 'bg-gradient-to-r from-primary-500 to-primary-600 text-white'
+              }">
+                <p>${message.text}</p>
+                <p class="text-xs opacity-75 mt-1">${time}</p>
+              </div>
+            </div>
+          `;
+        });
+        
+        chatMessages.innerHTML = html;
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+
+      async function sendMessage() {
+        const input = document.getElementById('message-input');
+        const message = input.value.trim();
+        
+        if (!message || !selectedCustomerId) return;
+        
+        try {
+          // Find customer info
+          const q = query(
+            collection(db, "messages"),
+            where("userEmail", "==", selectedCustomerId.includes('@') ? selectedCustomerId : null)
+          );
+          const snapshot = await getDocs(q);
+          let customerEmail = selectedCustomerId;
+          let customerName = 'Customer';
+          
+          if (!snapshot.empty) {
+            const firstMessage = snapshot.docs[0].data();
+            customerEmail = firstMessage.userEmail;
+            customerName = firstMessage.userName;
+          }
+          
+          // Send message
+          await addDoc(collection(db, "messages"), {
+            userId: selectedCustomerId.includes('@') ? null : selectedCustomerId,
+            userEmail: customerEmail,
+            userName: customerName,
+            text: message,
+            sender: 'admin',
+            read: true,
+            createdAt: Timestamp.now()
+          });
+          
+          input.value = '';
+          loadCustomerMessages(selectedCustomerId);
+          loadConversations(); // Refresh conversation list
+          
+        } catch (error) {
+          console.error("Error sending message:", error);
+          showError("Failed to send message");
+        }
+      }
+
+      async function markMessagesAsRead(customerId) {
+        try {
+          let q;
+          if (customerId.includes('@')) {
+            q = query(
+              collection(db, "messages"),
+              where("userEmail", "==", customerId),
+              where("sender", "==", "client"),
+              where("read", "==", false)
+            );
+          } else {
+            q = query(
+              collection(db, "messages"),
+              where("userId", "==", customerId),
+              where("sender", "==", "client"),
+              where("read", "==", false)
+            );
+          }
+          
+          const snapshot = await getDocs(q);
+          const batch = writeBatch(db);
+          
+          snapshot.forEach(doc => {
+            batch.update(doc.ref, { read: true });
+          });
+          
+          if (snapshot.size > 0) {
+            await batch.commit();
+            loadDashboardData(); // Update unread count
+          }
+          
+        } catch (error) {
+          console.error("Error marking messages as read:", error);
+        }
+      }
+
+      // ========== AVAILABILITY MANAGEMENT ==========
+      async function loadAvailability() {
+        try {
+          const today = new Date().toISOString().split('T')[0];
+          const q = query(
+            collection(db, "blockedDates"),
+            where("date", ">=", today),
+            orderBy("date", "asc")
+          );
+          
+          const snapshot = await getDocs(q);
+          displayBlockedDates(snapshot);
+          generateCalendar();
+          
+        } catch (error) {
+          console.error("Error loading availability:", error);
+          showError("Failed to load availability data");
+        }
+      }
+
+      async function handleAvailabilitySubmit(e) {
+        e.preventDefault();
+        
+        try {
+          const date = document.getElementById('block-date').value;
+          const reason = document.getElementById('block-reason').value || 'Unavailable';
+          
+          await addDoc(collection(db, "blockedDates"), {
+            date,
+            reason,
+            createdAt: Timestamp.now(),
+            createdBy: currentUser.uid
+          });
+          
+          showSuccess("Date blocked successfully!");
+          document.getElementById('availability-form').reset();
+          loadAvailability();
+          
+        } catch (error) {
+          console.error("Error blocking date:", error);
+          showError("Failed to block date");
+        }
+      }
+
+      function displayBlockedDates(snapshot) {
+        const table = document.getElementById('blocked-dates-table');
+        
+        if (snapshot.empty) {
+          table.innerHTML = `
+            <div class="p-8 text-center">
+              <p class="text-primary-500">No blocked dates found</p>
+            </div>
+          `;
+          return;
+        }
+        
+        let html = '';
+        snapshot.forEach(doc => {
+          const blocked = doc.data();
+          const date = new Date(blocked.date);
+          const formattedDate = date.toLocaleDateString('en-US', { 
+            weekday: 'long',
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric'
+          });
+          
+          html += `
+            <div class="p-4 flex items-center justify-between hover:bg-red-50 transition">
+              <div>
+                <p class="font-medium text-primary-800">${formattedDate}</p>
+                <p class="text-sm text-primary-600">${blocked.reason}</p>
+              </div>
+              <button onclick="unblockDate('${doc.id}')" class="text-red-600 hover:text-red-800 p-2">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          `;
+        });
+        
+        table.innerHTML = html;
+      }
+
+      window.unblockDate = async (id) => {
+        showConfirm(
+          "Are you sure you want to unblock this date? Customers will be able to book on this date.",
+          async () => {
+            try {
+              await deleteDoc(doc(db, "blockedDates", id));
+              showSuccess("Date unblocked successfully!");
+              loadAvailability();
+            } catch (error) {
+              console.error("Error unblocking date:", error);
+              showError("Failed to unblock date");
+            }
+          }
+        );
+      };
+
+      async function generateCalendar() {
+        try {
+          const calendar = document.getElementById('calendar');
+          
+          // Get blocked dates for current month
+          const firstDay = new Date(currentYear, currentMonth, 1);
+          const lastDay = new Date(currentYear, currentMonth + 1, 0);
+          const firstDayStr = firstDay.toISOString().split('T')[0];
+          const lastDayStr = lastDay.toISOString().split('T')[0];
+          
+          const q = query(
+            collection(db, "blockedDates"),
+            where("date", ">=", firstDayStr),
+            where("date", "<=", lastDayStr)
+          );
+          
+          const snapshot = await getDocs(q);
+          const blockedDates = [];
+          snapshot.forEach(doc => {
+            blockedDates.push(doc.data().date);
+          });
+          
+          // Clear calendar
+          calendar.innerHTML = '';
+          
+          // Calendar headers
+          const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+          days.forEach(day => {
+            const dayHeader = document.createElement('div');
+            dayHeader.className = 'text-center font-semibold text-primary-600 py-2';
+            dayHeader.textContent = day;
+            calendar.appendChild(dayHeader);
+          });
+          
+          // Get first day of month and number of days
+          const daysInMonth = lastDay.getDate();
+          const startingDay = firstDay.getDay();
+          
+          // Add empty cells for days before the first day of the month
+          for (let i = 0; i < startingDay; i++) {
+            const emptyCell = document.createElement('div');
+            emptyCell.className = 'h-24 border border-primary-200 rounded-lg bg-primary-50';
+            calendar.appendChild(emptyCell);
+          }
+          
+          // Add cells for each day of the month
+          const today = new Date();
+          const todayStr = today.toISOString().split('T')[0];
+          
+          for (let day = 1; day <= daysInMonth; day++) {
+            const date = new Date(currentYear, currentMonth, day);
+            const dateString = date.toISOString().split('T')[0];
+            
+            const dayCell = document.createElement('div');
+            dayCell.className = 'h-24 border border-primary-200 rounded-lg p-2 transition-all duration-200';
+            
+            const isPast = date < today && dateString !== todayStr;
+            const isToday = dateString === todayStr;
+            const isBlocked = blockedDates.includes(dateString);
+            
+            if (isBlocked) {
+              dayCell.classList.add('bg-gradient-to-br from-red-50 to-red-100', 'border-red-300', 'text-red-700');
+            } else if (isPast) {
+              dayCell.classList.add('bg-gradient-to-br from-gray-50 to-gray-100', 'text-gray-400');
+            } else if (isToday) {
+              dayCell.classList.add('bg-gradient-to-br from-blue-50 to-blue-100', 'border-blue-300', 'border-2', 'text-primary-800');
+            } else {
+              dayCell.classList.add('bg-gradient-to-br from-white to-primary-50', 'hover:bg-gradient-to-br hover:from-primary-50 hover:to-primary-100', 'cursor-pointer', 'text-primary-700');
+            }
+            
+            dayCell.innerHTML = `
+              <div class="flex justify-between items-start mb-1">
+                <span class="text-sm font-medium">${day}</span>
+                ${isBlocked ? '<i class="fas fa-ban text-red-500 text-xs"></i>' : ''}
+                ${isToday ? '<i class="fas fa-calendar-day text-blue-500 text-xs"></i>' : ''}
+              </div>
+              <div class="text-xs space-y-1">
+                ${isBlocked ? '<div class="text-red-600 font-medium">Unavailable</div>' : 
+                  isPast ? '<div class="text-gray-500">Past</div>' : 
+                  '<div class="text-green-600 font-medium">Available</div>'}
+              </div>
+            `;
+            
+            // Add click handler for available future dates
+            if (!isPast && !isBlocked) {
+              dayCell.addEventListener('click', () => {
+                document.getElementById('block-date').value = dateString;
+              });
+            }
+            
+            calendar.appendChild(dayCell);
+          }
+          
+          // Update calendar title
+          const monthNames = [
+            'January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'
+          ];
+          document.getElementById('calendar-title').textContent = 
+            `Availability Calendar - ${monthNames[currentMonth]} ${currentYear}`;
+            
+        } catch (error) {
+          console.error("Error generating calendar:", error);
+        }
+      }
+
+      window.previousMonth = () => {
+        currentMonth--;
+        if (currentMonth < 0) {
+          currentMonth = 11;
+          currentYear--;
+        }
+        generateCalendar();
+      };
+
+      window.nextMonth = () => {
+        currentMonth++;
+        if (currentMonth > 11) {
+          currentMonth = 0;
+          currentYear++;
+        }
+        generateCalendar();
+      };
+
+      // ========== REPORTS ==========
+      async function loadReports() {
+        try {
+          // Get last 6 months of data
+          const sixMonthsAgo = new Date();
+          sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+          const startDate = sixMonthsAgo.toISOString().split('T')[0];
+          
+          const q = query(
+            collection(db, "bookings"),
+            where("date", ">=", startDate),
+            where("status", "==", "completed")
+          );
+          
+          const snapshot = await getDocs(q);
+          const data = processReportData(snapshot);
+          renderCharts(data);
+          
+        } catch (error) {
+          console.error("Error loading reports:", error);
+          showError("Failed to load reports");
+        }
+      }
+
+      function processReportData(snapshot) {
+        const revenueByMonth = {};
+        const serviceCounts = {};
+        
+        snapshot.forEach(doc => {
+          const booking = doc.data();
+          const date = new Date(booking.date);
+          const monthYear = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+          
+          // Revenue by month
+          if (!revenueByMonth[monthYear]) {
+            revenueByMonth[monthYear] = 0;
+          }
+          revenueByMonth[monthYear] += booking.price || 0;
+          
+          // Service counts
+          if (!serviceCounts[booking.style]) {
+            serviceCounts[booking.style] = 0;
+          }
+          serviceCounts[booking.style]++;
+        });
+        
+        return { revenueByMonth, serviceCounts };
+      }
+
+      function renderCharts(data) {
+        // Revenue chart
+        const revenueCtx = document.getElementById('revenueChart');
+        if (revenueChart) revenueChart.destroy();
+        
+        const months = Object.keys(data.revenueByMonth).sort();
+        const revenueData = months.map(month => data.revenueByMonth[month]);
+        
+        revenueChart = new Chart(revenueCtx, {
+          type: 'line',
+          data: {
+            labels: months.map(m => formatMonthYear(m)),
+            datasets: [{
+              label: 'Revenue (R)',
+              data: revenueData,
+              borderColor: '#ea7c2a',
+              backgroundColor: 'rgba(234, 124, 42, 0.1)',
+              borderWidth: 3,
+              tension: 0.4,
+              fill: true
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                labels: {
+                  color: '#4b5563'
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: {
+                  color: 'rgba(234, 124, 42, 0.1)'
+                },
+                ticks: {
+                  color: '#4b5563'
+                }
+              },
+              x: {
+                grid: {
+                  color: 'rgba(234, 124, 42, 0.1)'
+                },
+                ticks: {
+                  color: '#4b5563'
+                }
+              }
+            }
+          }
+        });
+        
+        // Services chart
+        const servicesCtx = document.getElementById('servicesChart');
+        if (servicesChart) servicesChart.destroy();
+        
+        const services = Object.keys(data.serviceCounts);
+        const counts = services.map(service => data.serviceCounts[service]);
+        
+        servicesChart = new Chart(servicesCtx, {
+          type: 'doughnut',
+          data: {
+            labels: services,
+            datasets: [{
+              data: counts,
+              backgroundColor: [
+                '#ea7c2a', '#f9b384', '#b64d1c', '#fdebd7', '#fef6ee'
+              ],
+              borderWidth: 2,
+              borderColor: '#fff'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: {
+                  color: '#4b5563'
+                }
+              }
+            }
+          }
+        });
+      }
+
+      function formatMonthYear(monthYear) {
+        const [year, month] = monthYear.split('-');
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return `${monthNames[parseInt(month) - 1]} ${year}`;
+      }
+
+      // ========== UTILITY FUNCTIONS ==========
+      function showLoading(elementId, message = 'Loading...') {
+        const element = document.getElementById(elementId);
+        if (element) {
+          element.innerHTML = `
+            <div class="p-8 text-center">
+              <div class="inline-block">
+                <div class="loading"></div>
+              </div>
+              <p class="text-primary-500 mt-2">${message}</p>
+            </div>
+          `;
+        }
+      }
+
+      function getTimeAgo(date) {
+        const seconds = Math.floor((new Date() - date) / 1000);
+        
+        let interval = seconds / 31536000;
+        if (interval > 1) return Math.floor(interval) + " years ago";
+        
+        interval = seconds / 2592000;
+        if (interval > 1) return Math.floor(interval) + " months ago";
+        
+        interval = seconds / 86400;
+        if (interval > 1) return Math.floor(interval) + " days ago";
+        
+        interval = seconds / 3600;
+        if (interval > 1) return Math.floor(interval) + " hours ago";
+        
+        interval = seconds / 60;
+        if (interval > 1) return Math.floor(interval) + " minutes ago";
+        
+        return "Just now";
+      }
+
+      function showSuccess(message, title = "Success") {
+        Swal.fire({
+          title: title,
+          text: message,
+          icon: 'success',
+          confirmButtonColor: '#ea7c2a',
+          timer: 3000
+        });
+      }
+
+      function showError(message, title = "Error") {
+        Swal.fire({
+          title: title,
+          text: message,
+          icon: 'error',
+          confirmButtonColor: '#ea7c2a'
+        });
+      }
+
+      function showConfirm(message, callback, title = "Are you sure?") {
+        Swal.fire({
+          title: title,
+          text: message,
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#ea7c2a',
+          cancelButtonColor: '#6b7280',
+          confirmButtonText: 'Yes, proceed',
+          cancelButtonText: 'Cancel'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            callback();
+          }
+        });
+      }
+
+      // ========== REAL-TIME LISTENERS ==========
+      function setupRealtimeListeners() {
+        // Bookings listener
+        const bookingsQuery = query(collection(db, "bookings"));
+        onSnapshot(bookingsQuery, (snapshot) => {
+          if (getCurrentSection() === 'dashboard') {
+            loadDashboardData();
+          }
+          if (getCurrentSection() === 'bookings') {
+            loadBookings();
+          }
+          if (getCurrentSection() === 'customers') {
+            loadAllCustomers();
+          }
+        });
+        
+        // Messages listener
+        const messagesQuery = query(collection(db, "messages"));
+        onSnapshot(messagesQuery, (snapshot) => {
+          if (getCurrentSection() === 'messages') {
+            loadConversations();
+          }
+          if (getCurrentSection() === 'dashboard') {
+            loadDashboardData();
+          }
+        });
+        
+        // Services listener
+        const servicesQuery = query(collection(db, "services"));
+        onSnapshot(servicesQuery, (snapshot) => {
+          if (getCurrentSection() === 'services') {
+            loadServices();
+          }
+        });
+      }
+
+      // ========== LOGOUT FUNCTION ==========
+      window.logout = async () => {
+        try {
+          showConfirm(
+            "Are you sure you want to logout?",
+            async () => {
+              try {
+                await signOut(auth);
+                // Clear local storage
+                localStorage.removeItem('adminSession');
+                localStorage.removeItem('user');
+                sessionStorage.removeItem('adminSession');
+                sessionStorage.removeItem('user');
+                
+                // Clear cookies
+                document.cookie = "adminSession=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+                
+                // Redirect to home page
+                window.location.href = "index.html";
+              } catch (error) {
+                console.error("Error signing out:", error);
+                showError("Failed to logout. Please try again.");
+              }
+            }
+          );
+        } catch (error) {
+          console.error("Logout error:", error);
+        }
+      };
+
+      window.navigateToSection = navigateToSection;
+
+      window.refreshDashboard = () => {
+        loadDashboardData();
+        showSuccess("Dashboard refreshed!");
+      };
+
+      window.previousDay = () => {
+        currentDate.setDate(currentDate.getDate() - 1);
+        document.getElementById('schedule-date').textContent = 
+          currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        loadDashboardData();
+      };
+
+      window.nextDay = () => {
+        currentDate.setDate(currentDate.getDate() + 1);
+        document.getElementById('schedule-date').textContent = 
+          currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        loadDashboardData();
+      };
+
+      // Initialize
+      document.addEventListener('DOMContentLoaded', function() {
+        // Show loading state
+        const scheduleContent = document.getElementById('schedule-content');
+        if (scheduleContent) {
+          scheduleContent.innerHTML = `
+            <div class="p-8 text-center">
+              <div class="inline-block">
+                <div class="loading"></div>
+              </div>
+              <p class="text-primary-500 mt-2">Loading dashboard...</p>
+            </div>
+          `;
+        }
+        
+        // Set up active state for dashboard
+        document.querySelector('a[href="#dashboard"]').classList.add('active');
+      });
+
+    </script>
+  </body>
+</html>
