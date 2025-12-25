@@ -231,7 +231,15 @@ document.addEventListener("DOMContentLoaded", function () {
   initNameValidation();
 
   // Firebase initialization
-  
+  const firebaseConfig = {
+    apiKey: "AIzaSyCkgSvUKoR0FCXARDmgOqoXySMbCh5EMY8",
+    authDomain: "braids-by-zonke.firebaseapp.com",
+    projectId: "braids-by-zonke",
+    storageBucket: "braids-by-zonke.firebasestorage.app",
+    messagingSenderId: "537270598591",
+    appId: "1:537270598591:web:324dd06538c213627abf0a",
+    measurementId: "G-NR21BKSR8N"
+  };
 
   // Initialize Firebase
   if (!firebase.apps.length) {
